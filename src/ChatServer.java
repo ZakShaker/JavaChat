@@ -20,36 +20,37 @@ public class ChatServer {
 
     public static void main(String[] args) throws Exception {
         System.out.println("The chat server is running.");
-        ServerSocket listener = new ServerSocket(PORT);
+        ServerSocket serverSocket = new ServerSocket(PORT);
         try {
             while (true) {
-                new Handler(listener.accept()).start();
+                new Handler(serverSocket.accept()).start();
             }
         } finally {
-            listener.close();
+            serverSocket.close();
         }
     }
 
     private static class Handler extends Thread {
-        private Socket socket;
+        private Socket clientSocket;
         private BufferedReader in;
         private PrintWriter out;
 
-        public Handler(Socket socket) {
-            this.socket = socket;
+        public Handler(Socket clientSocket) {
+            this.clientSocket = clientSocket;
         }
 
         public void run() {
             try {
+                boolean userConnected = true;
                 String userName = null;
 
-                in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-                out = new PrintWriter(socket.getOutputStream(), true);
+                in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
+                out = new PrintWriter(clientSocket.getOutputStream(), true);
 
                 MenuState menuState = MenuState.START;
 
                 String command = null;
-                while (true) {
+                while (userConnected) {
                     switch (menuState) {
                         case START:
                             out.println(MENU_CODE + "Type: \"1\" to log in or \"2\" to register");
@@ -59,7 +60,7 @@ public class ChatServer {
                             } else if ("2".equals(command)) {
                                 menuState = MenuState.REGISTER;
                             } else {
-                                out.println("Please,");
+                                out.print(MENU_CODE + "Please, ");
                             }
                             break;
                         case LOGIN:
@@ -71,7 +72,7 @@ public class ChatServer {
                                 userName = command;
                                 menuState = MenuState.TYPE_PASSWORD;
                             } else {
-                                out.println("No such user. Check username again and ");
+                                out.print(MENU_CODE + "No user named '" + command + "'. Check username again and ");
                             }
                             break;
                         case TYPE_PASSWORD:
@@ -82,7 +83,7 @@ public class ChatServer {
                             } else if (users.get(userName).equals(command)) {
                                 menuState = MenuState.CHAT;
                             } else {
-                                out.println("The password is not valid,");
+                                out.print(MENU_CODE + "The password is not valid, ");
                             }
                             break;
                         case REGISTER:
@@ -94,7 +95,7 @@ public class ChatServer {
                                 userName = command;
                                 menuState = MenuState.CREATE_PASSWORD;
                             } else {
-                                out.println("This username already exists,");
+                                out.print(MENU_CODE + "This username already exists, ");
                             }
                             break;
                         case CREATE_PASSWORD:
@@ -113,31 +114,45 @@ public class ChatServer {
                             out.println(MENU_CODE + "Welcome to the chat, " + userName + "! To quit the chat enter \"q\"");
                             boolean chatIsOn = true;
                             while (chatIsOn) {
-                                String input = in.readLine();
-                                if (input == null) {
-                                    chatIsOn = false;
-                                } else if ("q".equals(input)) {
+                                System.out.println("жду инпута");
+                                String input;
+                                boolean isReady = in.ready();
+                                while (!isReady) {
+                                    isReady = in.ready();
+                                }
+                                input = in.readLine();
+
+                                System.out.println("Принял" + input);
+                                System.out.println("Принял" + input);
+                                if ("q".equals(input)) {
                                     chatIsOn = false;
                                     writers.remove(out);
                                     menuState = MenuState.START;
                                 } else {
                                     for (PrintWriter writer : writers) {
                                         writer.println(MSG_CODE + userName + ": " + input);
+                                        System.out.println("отправил обратно " + input);
                                     }
+                                    System.out.println("отправил обратно " + input);
                                 }
                             }
                             break;
                     }
                 }
-            } catch (IOException e) {
+            } catch (
+                    IOException e)
+
+            {
                 System.out.println(e);
-            } finally {
+            } finally
+
+            {
                 if (out != null && writers.contains(out)) {
                     writers.remove(out);
                 }
 
                 try {
-                    socket.close();
+                    clientSocket.close();
                 } catch (IOException e) {
                     e.printStackTrace();
                 }

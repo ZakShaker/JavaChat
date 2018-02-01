@@ -7,54 +7,70 @@ import java.util.Scanner;
 
 public class ChatClient {
 
-    Thread screen = new Thread(new Runnable() {
-        @Override
-        public void run() {
-            while (true)
-                out.println(getLineFromChat());
-        }
-    });
-
     private int port = 9099;
     private String serverAddress = "127.0.0.1";
     private Scanner scannerLogin;
-    private BufferedReader in;
-    private PrintWriter out;
+    private BufferedReader fromServer;
+    private PrintWriter toServer;
 
     public ChatClient() {
         scannerLogin = new Scanner(System.in);
     }
 
-    private String getLineFromChat() {
-        while (true) {
-            String lineFromChat = scannerLogin.next();
-            if (!"q".equals(lineFromChat)) {
-                return lineFromChat;
-            }
-            if ("q".equals(lineFromChat)) {
-                return null;
+    private void run() {
+        boolean chatWorks = true;
+        while (chatWorks) {
+            try {
+                Socket socket = new Socket(serverAddress, port); //throws IOException
+
+                fromServer = new BufferedReader(new InputStreamReader(
+                        socket.getInputStream()));
+                toServer = new PrintWriter(socket.getOutputStream(), true);
+
+                new Thread(new Runnable() {
+                    @Override
+                    public void run() {
+                        boolean userWantsToChat = true;
+                        Scanner scanner = new Scanner(System.in);
+                        while (userWantsToChat) {
+                            String lineFromChat = scanner.nextLine();
+                            if ("q".equals(lineFromChat)) {
+                                userWantsToChat = false;
+                            }
+                            toServer.println(lineFromChat);
+                        }
+                    }
+                }).start();
+
+
+                while (true) {
+                    String line = fromServer.readLine();
+                    if (line.startsWith(ChatServer.MENU_CODE)) {
+                        System.out.println(line.replace(ChatServer.MENU_CODE, ""));
+                    } else if (line.startsWith(ChatServer.START_CHAT_CODE)) {
+                        System.out.println(line.replace(ChatServer.START_CHAT_CODE, ""));
+                    } else if (line.startsWith(ChatServer.MSG_CODE)) {
+                        System.out.println(line.replace(ChatServer.MSG_CODE, ""));
+                    }
+                }
+            } catch (IOException e) {
+                System.out.println("Cannot connect to the server.\nWould you like to try again or exit?\nEnter '1' to proceed, or 'q' to exit");
+                Scanner answerScanner = new Scanner(System.in);
+                boolean userAnswered = false;
+                while (!userAnswered) {
+                    String userAnswer = answerScanner.next();
+                    if ("q".equals(userAnswer)) {
+                        System.out.println("See you later! Bye-bye :-)");
+                        chatWorks = false;
+                        userAnswered = true;
+                    } else if ("1".equals(userAnswer)) {
+                        chatWorks = true;
+                        userAnswered = true;
+                    }
+                }
             }
         }
-    }
 
-    private void run() throws IOException {
-
-        Socket socket = new Socket(serverAddress, port);
-        in = new BufferedReader(new InputStreamReader(
-                socket.getInputStream()));
-        out = new PrintWriter(socket.getOutputStream(), true);
-
-        while (true) {
-            String line = in.readLine();
-            System.out.println(line.substring(ChatServer.CODE_LENGTH));
-            if (line.startsWith(ChatServer.MENU_CODE)) {
-                out.println(getLineFromChat());
-            } else if (line.startsWith(ChatServer.START_CHAT_CODE)) {
-                screen.start();
-            } else if (line.startsWith(ChatServer.MSG_CODE)) {
-                //TODO: maybe additional logic will be added
-            }
-        }
     }
 
     /**
