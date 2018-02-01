@@ -20,6 +20,7 @@ public class ChatClient {
     private Scanner scannerLogin;
     private BufferedReader in;
     private PrintWriter out;
+
     public ChatClient() {
         scannerLogin = new Scanner(System.in);
     }
@@ -45,16 +46,13 @@ public class ChatClient {
 
         while (true) {
             String line = in.readLine();
-            if (line.startsWith("Choose login")) {
-                System.out.println(line);
+            System.out.println(line.substring(ChatServer.CODE_LENGTH));
+            if (line.startsWith(ChatServer.MENU_CODE)) {
                 out.println(getLineFromChat());
-            } else if (line.startsWith("Name is free")) {
-                System.out.println("Welcome to the chat! Start typing");
+            } else if (line.startsWith(ChatServer.START_CHAT_CODE)) {
                 screen.start();
-            } else if (line.startsWith("msg")) {
-                System.out.print("\033[H\033[2J");
-                System.out.flush();
-                System.err.println(line.substring(8) + "\n");
+            } else if (line.startsWith(ChatServer.MSG_CODE)) {
+                //TODO: maybe additional logic will be added
             }
         }
     }
